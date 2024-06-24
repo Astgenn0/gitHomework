@@ -65,6 +65,7 @@ public class HelloWorld : MonoBehaviour
         DestroyImmediate(SampleGameobject);
         SampleBundle.Unload(isTrue);
 
+        //不会破坏当前运行时的效果
         Resources.UnloadUnusedAssets();
     }
         
