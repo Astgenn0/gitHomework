@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -39,7 +40,7 @@ public class HelloWorld : MonoBehaviour
 
     public string AssetBundleLoadPath;
 
-    public string HTTPAdress = "http://10.255.46.126:8080/";
+    public string HTTPAdress = "http://10.255.46.126:80";
 
     public string HTTPAssetBundlePath;
 
@@ -49,7 +50,7 @@ public class HelloWorld : MonoBehaviour
     {
         CheckAssetBundleLoadPath();
 
-        LoadAssetBundleButton.onClick.AddListener(LoadAssetBundle);
+        LoadAssetBundleButton.onClick.AddListener(CheckAssetBundlePattern);
 
         LoadAssetButton.onClick.AddListener(LoadAsset);
 
@@ -71,6 +72,7 @@ public class HelloWorld : MonoBehaviour
                 HTTPAssetBundlePath = Path.Combine(HTTPAdress, MainAssetBundleName);
                 DownloadPath = Path.Combine(Application.persistentDataPath, "DownloadAssetBundle");
                 AssetBundleLoadPath = Path.Combine(DownloadPath, MainAssetBundleName);
+                Debug.Log(AssetBundleLoadPath);
                 if (!Directory.Exists(AssetBundleLoadPath))
                 {
                     Directory.CreateDirectory(AssetBundleLoadPath);
@@ -79,14 +81,15 @@ public class HelloWorld : MonoBehaviour
         }
     }
 
-    IEnumerator DownloadFile(string fileName,bool isSaveFile=true)
+
+
+    IEnumerator DownloadFile(string fileName, Action callBack, bool isSaveFile = true)
     {
-         
         string AssetBundleDownloadPath = Path.Combine(HTTPAssetBundlePath, fileName);
 
         UnityWebRequest webRequest = UnityWebRequest.Get(AssetBundleDownloadPath);
 
-        webRequest.SendWebRequest();
+        yield return webRequest.SendWebRequest();
 
         while (!webRequest.isDone)
         {
@@ -97,46 +100,49 @@ public class HelloWorld : MonoBehaviour
             yield return new WaitForEndOfFrame();
         }
 
-        /*        AssetBundle mainBundle = DownloadHandlerAssetBundle.GetContent(webRequest);
-
-                Debug.Log(mainBundle);
-
-                AssetBundleManifest manifest = mainBundle.LoadAsset<AssetBundleManifest>(nameof(AssetBundleManifest));
-
-                foreach (string bundleName in manifest.GetAllAssetBundles())
-                {
-                    Debug.Log(bundleName);
-                }*/
-
         string fileSavePath = Path.Combine(AssetBundleLoadPath, fileName);
         Debug.Log(webRequest.downloadHandler.data.Length);
         if (isSaveFile)
         {
-            yield return SaveFile(fileSavePath, webRequest.downloadHandler.data);
+            yield return SaveFile(fileSavePath, webRequest.downloadHandler.data, callBack);
+        }
+        else
+        {
+            //三目运算符判断是否为空
+            callBack?.Invoke();
         }
     }
 
 
-    IEnumerator SaveFile(string savePath,byte[] bytes)
+    IEnumerator SaveFile(string savePath, byte[] bytes, Action callBack)
     {
+
+        //所有的system.IO方法，都只能在window上运行
+        //如果想要跨平台保存文件，应每个平台调用不同的API
         FileStream fileStream = File.Open(savePath, FileMode.OpenOrCreate);
 
-        yield return fileStream.WriteAsync(bytes,0,bytes.Length);
+        yield return fileStream.WriteAsync(bytes, 0, bytes.Length);
 
         //释放文件流，否则文件一直处于被读取状态而不能被其他进程读取
         fileStream.Flush();
         fileStream.Close();
         fileStream.Dispose();
 
+        callBack?.Invoke();
         Debug.Log($"{savePath}文件保存完成");
 
     }
-    void LoadAssetBundle()
+
+    void CheckAssetBundlePattern()
     {
         if (LoadPattern == AssetBundlePattern.Remote)
         {
-            StartCoroutine(DownloadFile(ObjectAssetBundleName));
+            StartCoroutine(DownloadFile(ObjectAssetBundleName, LoadAssetBundle));
         }
+    }
+
+    void LoadAssetBundle()
+    {
 
         string assetBundlePath = Path.Combine(AssetBundleLoadPath, MainAssetBundleName);
         //通过外部路径加载AB包

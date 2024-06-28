@@ -4,6 +4,12 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 
+public enum AssetBundleCompresionPattern
+{
+    LZMA,
+    LZ4,
+    None
+}
 public class AssetManagerEditor
 {
     public static string AssetManagerVersion = "1.0.0";
@@ -13,6 +19,8 @@ public class AssetManagerEditor
     //本地模式，打包到streamingAssets
     //远端模式打包到任意远端路径，在该示例中为persistentDataPath
     public static AssetBundlePattern BuildingPattern;
+
+    public static AssetBundleCompresionPattern CompressionPattern;
 
     //需要打包的文件夹
     public static DefaultAsset AssetBundleDirectory;
@@ -39,9 +47,28 @@ public class AssetManagerEditor
         //options为none时使用LZMA压缩
         //为UncompressedAssetBundle不进行压缩
         //ChunkBasedCompression进行LZ4块压缩
-        BuildPipeline.BuildAssetBundles(AssetBundleOutputPath, BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows);
+        BuildPipeline.BuildAssetBundles(AssetBundleOutputPath, CheckCompressionPattern(), BuildTarget.StandaloneWindows);
 
         Debug.Log("AB包打包已完成");
+    }
+
+    static BuildAssetBundleOptions CheckCompressionPattern()
+    {
+        BuildAssetBundleOptions option = new BuildAssetBundleOptions();
+        switch (CompressionPattern)
+        {
+            case AssetBundleCompresionPattern.LZMA:
+                option = BuildAssetBundleOptions.None;
+                break;
+            case AssetBundleCompresionPattern.LZ4:
+                option = BuildAssetBundleOptions.ChunkBasedCompression;
+                break;
+            case AssetBundleCompresionPattern.None:
+                option = BuildAssetBundleOptions.UncompressedAssetBundle;
+                break;
+
+        }
+        return option;
     }
 
 
@@ -105,7 +132,7 @@ public class AssetManagerEditor
 
 
 
-        BuildPipeline.BuildAssetBundles(AssetBundleOutputPath, assetBundleBuild, BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows);
+        BuildPipeline.BuildAssetBundles(AssetBundleOutputPath, assetBundleBuild, CheckCompressionPattern(), BuildTarget.StandaloneWindows);
     }
 
     public static List<string> FindAllAssetFromDirectory(string directoryPath)

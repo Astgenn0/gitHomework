@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
+
+
 public class AssetManagerEditorWindow : EditorWindow
 {
     public static GUIStyle TitleTextStyle;
@@ -36,6 +38,9 @@ public class AssetManagerEditorWindow : EditorWindow
 
         GUILayout.Space(20);
         AssetManagerEditor.BuildingPattern = (AssetBundlePattern)EditorGUILayout.EnumPopup("打包模式",AssetManagerEditor.BuildingPattern);
+
+        GUILayout.Space(20);
+        AssetManagerEditor.CompressionPattern = (AssetBundleCompresionPattern)EditorGUILayout.EnumPopup("压缩格式", AssetManagerEditor.CompressionPattern);
 
         GUILayout.Space(20);
 
