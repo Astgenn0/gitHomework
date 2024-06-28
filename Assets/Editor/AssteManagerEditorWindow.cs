@@ -35,6 +35,9 @@ public class AssetManagerEditorWindow : EditorWindow
         GUILayout.Label(AssetManagerEditor.AssetManagerVersion, VersionTextstyle);
 
         GUILayout.Space(20);
+        AssetManagerEditor.BuildingPattern = (AssetBundlePattern)EditorGUILayout.EnumPopup("打包模式",AssetManagerEditor.BuildingPattern);
+
+        GUILayout.Space(20);
 
         AssetManagerEditor.AssetBundleDirectory = EditorGUILayout.ObjectField(AssetManagerEditor.AssetBundleDirectory,typeof(DefaultAsset),true) as DefaultAsset;
 

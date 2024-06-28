@@ -7,24 +7,31 @@ using System.IO;
 public class AssetManagerEditor
 {
     public static string AssetManagerVersion = "1.0.0";
-    
+
+
+    //编辑器模拟下进行打包
+    //本地模式，打包到streamingAssets
+    //远端模式打包到任意远端路径，在该示例中为persistentDataPath
+    public static AssetBundlePattern BuildingPattern;
+
     //需要打包的文件夹
     public static DefaultAsset AssetBundleDirectory;
 
-    public static string MainAssetBundleName = "SampleAssetBundle";
 
-    public static string AssetBundleOutputPath = Path.Combine(Application.persistentDataPath, MainAssetBundleName);
+
+    public static string AssetBundleOutputPath;
 
     //通过MenuItem，声明Editor顶部菜单
-    [MenuItem(nameof(AssetManagerEditor)+"/"+nameof(BuildAssetBundle))]
-   static void BuildAssetBundle()
+    [MenuItem(nameof(AssetManagerEditor) + "/" + nameof(BuildAssetBundle))]
+    static void BuildAssetBundle()
     {
+        CheckBuildingOutputPath();
         //在字符串中自动插入斜杠    
-        string outputPath = Path.Combine(Application.persistentDataPath, "Bundles");
+        
 
-        if (!Directory.Exists(outputPath))
+        if (!Directory.Exists(AssetBundleOutputPath))
         {
-            Directory.CreateDirectory(outputPath);
+            Directory.CreateDirectory(AssetBundleOutputPath);
         }
 
         //不同平台间的AssetBundle不可通用 
@@ -32,7 +39,7 @@ public class AssetManagerEditor
         //options为none时使用LZMA压缩
         //为UncompressedAssetBundle不进行压缩
         //ChunkBasedCompression进行LZ4块压缩
-        BuildPipeline.BuildAssetBundles(outputPath, BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows);
+        BuildPipeline.BuildAssetBundles(AssetBundleOutputPath, BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows);
 
         Debug.Log("AB包打包已完成");
     }
@@ -42,15 +49,31 @@ public class AssetManagerEditor
     [MenuItem(nameof(AssetManagerEditor) + "/" + nameof(OpenAssetManagerWindow))]
     static void OpenAssetManagerWindow()
     {
-        Rect windowRect = new Rect(0, 0,500, 500);
+        Rect windowRect = new Rect(0, 0, 500, 500);
 
-        AssetManagerEditorWindow window=(AssetManagerEditorWindow) EditorWindow.GetWindow(typeof(AssetManagerEditorWindow),true);
+        AssetManagerEditorWindow window = (AssetManagerEditorWindow)EditorWindow.GetWindow(typeof(AssetManagerEditorWindow), true);
     }
 
+
+    static void CheckBuildingOutputPath()
+    {
+        switch (BuildingPattern)
+        {
+            case AssetBundlePattern.EditorSimulation:
+                break;
+            case AssetBundlePattern.Local:
+                AssetBundleOutputPath = Path.Combine(Application.streamingAssetsPath, HelloWorld.MainAssetBundleName);
+                break;
+            case AssetBundlePattern.Remote:
+                AssetBundleOutputPath = Path.Combine(Application.persistentDataPath, HelloWorld.MainAssetBundleName);
+                break;
+        }
+    }
 
     //打包文件夹内所有资源为AB包
     public static void BuildAssetBundleFromDirectory()
     {
+        CheckBuildingOutputPath();
         if (AssetBundleDirectory == null)
         {
             Debug.Log("打包目录不存在");
@@ -65,7 +88,7 @@ public class AssetManagerEditor
 
 
         //需要打包的具体包名，而非主包名
-        assetBundleBuild[0].assetBundleName = "rescoresbundle";
+        assetBundleBuild[0].assetBundleName = HelloWorld.ObjectAssetBundleName;
 
         //需要资源在工程下的路径
         assetBundleBuild[0].assetNames = assetPaths;
@@ -80,16 +103,16 @@ public class AssetManagerEditor
             Directory.CreateDirectory(AssetBundleOutputPath);
         }
 
-        
 
-        BuildPipeline.BuildAssetBundles(AssetBundleOutputPath, assetBundleBuild,BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows);
+
+        BuildPipeline.BuildAssetBundles(AssetBundleOutputPath, assetBundleBuild, BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows);
     }
 
-    public  static List<string> FindAllAssetFromDirectory(string directoryPath)
+    public static List<string> FindAllAssetFromDirectory(string directoryPath)
     {
         List<string> assetPaths = new List<string>();
 
-        if(!string.IsNullOrEmpty(directoryPath)&&!Directory.Exists(directoryPath))
+        if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
         {
             Debug.Log("文件夹路径不存在");
             return null;
@@ -102,9 +125,9 @@ public class AssetManagerEditor
         //获取所有文件信息
         //directory不属于文件类型，所以不会获取子文件夹
         FileInfo[] fileInfos = directoryInfo.GetFiles();
-        
+
         //所有非元数据文件路径都添加到列表中用于打包文件
-        foreach(FileInfo info in fileInfos)
+        foreach (FileInfo info in fileInfos)
         {
             if (info.Extension.Contains(".meta"))
             {
