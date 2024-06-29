@@ -439,7 +439,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b7b8980552541648ba415242198d546, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  LoadPattern: 2
+  LoadPattern: 1
   LoadAssetBundleButton: {fileID: 1397771313}
   LoadAssetButton: {fileID: 1923404069}
   UnLoadFalseButton: {fileID: 1654308420}

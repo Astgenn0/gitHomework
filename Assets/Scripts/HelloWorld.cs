@@ -22,7 +22,8 @@ public class HelloWorld : MonoBehaviour
 {
     public AssetBundlePattern LoadPattern;
 
-    AssetBundle SampleBundle;
+    AssetBundle CubeBundle;
+    AssetBundle SphereBundle;
     GameObject SampleGameobject;
 
     public Button LoadAssetBundleButton;
@@ -139,6 +140,10 @@ public class HelloWorld : MonoBehaviour
         {
             StartCoroutine(DownloadFile(ObjectAssetBundleName, LoadAssetBundle));
         }
+        else
+        {
+            LoadAssetBundle();
+        }
     }
 
     void LoadAssetBundle()
@@ -155,7 +160,7 @@ public class HelloWorld : MonoBehaviour
         //manifest文件本身是明文储存给开发者看的
         AssetBundleManifest assetBundleManifest = mainAB.LoadAsset<AssetBundleManifest>(nameof(AssetBundleManifest));
 
-        foreach (var depAssetBundleName in assetBundleManifest.GetAllDependencies(ObjectAssetBundleName))
+        foreach (var depAssetBundleName in assetBundleManifest.GetAllDependencies("0"))
         {
             Debug.Log(depAssetBundleName);
             assetBundlePath = Path.Combine(AssetBundleLoadPath, depAssetBundleName);
@@ -163,15 +168,21 @@ public class HelloWorld : MonoBehaviour
             AssetBundle.LoadFromFile(assetBundlePath);
         }
 
-        assetBundlePath = Path.Combine(AssetBundleLoadPath, ObjectAssetBundleName);
+        assetBundlePath = Path.Combine(AssetBundleLoadPath, "0");
         //AB包加载可以允许加载工程路径外的路径
-        SampleBundle = AssetBundle.LoadFromFile(assetBundlePath);
+        CubeBundle = AssetBundle.LoadFromFile(assetBundlePath);
+
+        assetBundlePath = Path.Combine(AssetBundleLoadPath, "1");
+        //AB包加载可以允许加载工程路径外的路径
+        SphereBundle = AssetBundle.LoadFromFile(assetBundlePath);
     }
 
     void LoadAsset()
     {
-        GameObject cubeObject = SampleBundle.LoadAsset<GameObject>("Cube");
-        SampleGameobject = Instantiate(cubeObject);
+        GameObject cubeObject = CubeBundle.LoadAsset<GameObject>("Cube");
+        Instantiate(cubeObject);
+        cubeObject = SphereBundle.LoadAsset<GameObject>("Sphere");
+        Instantiate(cubeObject);
     }
 
     void UnloadAssetBundle(bool isTrue)
@@ -179,7 +190,7 @@ public class HelloWorld : MonoBehaviour
         Debug.Log(isTrue);
         //当前帧回收
         DestroyImmediate(SampleGameobject);
-        SampleBundle.Unload(isTrue);
+        CubeBundle.Unload(isTrue);
 
         //不会破坏当前运行时的效果
         Resources.UnloadUnusedAssets();

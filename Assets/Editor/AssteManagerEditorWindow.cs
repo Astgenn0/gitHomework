@@ -22,6 +22,11 @@ public class AssetManagerEditorWindow : EditorWindow
         VersionTextstyle.normal.textColor = Color.gray;
         VersionTextstyle.alignment = TextAnchor.MiddleRight;
     }
+
+    private void OnEnable()
+    {
+        AssetManagerEditor.GetCurrentDeirectoryAllAssets();
+    }
     //这个方法会在每个渲染帧调用,可以用来渲染ui界面
     private void OnGUI()
     {
@@ -42,15 +47,24 @@ public class AssetManagerEditorWindow : EditorWindow
         GUILayout.Space(20);
         AssetManagerEditor.CompressionPattern = (AssetBundleCompresionPattern)EditorGUILayout.EnumPopup("压缩格式", AssetManagerEditor.CompressionPattern);
 
+        //打包资源选择
         GUILayout.Space(20);
+        AssetManagerEditor.AssetBundleDirectory = EditorGUILayout.ObjectField(AssetManagerEditor.AssetBundleDirectory, typeof(DefaultAsset), true) as DefaultAsset;
 
-        AssetManagerEditor.AssetBundleDirectory = EditorGUILayout.ObjectField(AssetManagerEditor.AssetBundleDirectory,typeof(DefaultAsset),true) as DefaultAsset;
+        if (AssetManagerEditor.CurrentAllAssets != null)
+        {
+            for(int i = 0; i < AssetManagerEditor.CurrentAllAssets.Count; i++)
+            {
+                AssetManagerEditor.CurrentSelectAssets[i] = EditorGUILayout.ToggleLeft(AssetManagerEditor.CurrentAllAssets[i], AssetManagerEditor.CurrentSelectAssets[i]);
+            }
+        }
 
 
         if (GUILayout.Button("打包AssetBundle"))
         {
-
-            AssetManagerEditor.BuildAssetBundleFromDirectory();
+            Debug.Log("按钮按下");
+            AssetManagerEditor.BuildAssetBundleFormSets();
+            //AssetManagerEditor.BuildAssetBundleFromDirectory();
         }
         
     }

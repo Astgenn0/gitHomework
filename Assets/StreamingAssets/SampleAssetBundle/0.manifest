@@ -1,0 +1,39 @@
+ManifestFileVersion: 0
+CRC: 4247197679
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 8dd265112cb6fd2ea9e9c6ce4a553a29
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 89c8b163c999d931ad03f8ce1557c431
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 8dd265112cb6fd2ea9e9c6ce4a553a29
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Resources/Elysia.jpg
+- Assets/Resources/Cube.prefab
+- Assets/Materials/Elysia.mat
+Dependencies:
+- F:/unity/homework/gitHomework/Assets/StreamingAssets/SampleAssetBundle/2

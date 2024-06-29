@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 626962227
+CRC: 443513332
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 622c208aafea6132cc6634d11373e9fb
+    Hash: f05ef1318d8738dfba9c71ba1f20ecc9
   TypeTreeHash:
     serializedVersion: 2
-    Hash: a3954d9da6324b836c32a89fa85d00a9
+    Hash: 032515474f2947adc795ff33d905505c
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 622c208aafea6132cc6634d11373e9fb
+    Hash: f05ef1318d8738dfba9c71ba1f20ecc9
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -20,15 +20,20 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 23
   Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
 - Class: 33
   Script: {instanceID: 0}
 - Class: 43
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
-- Class: 65
+- Class: 135
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Prefebs/Cube.prefab
-Dependencies: []
+- Assets/Materials/4ad219f3c70cfa7e.mat
+- Assets/Resources/111.jpg
+- Assets/Resources/Sphere.prefab
+Dependencies:
+- F:/unity/homework/gitHomework/Assets/StreamingAssets/SampleAssetBundle/2
