@@ -60,6 +60,11 @@
   <ItemGroup>
     <Compile Include="Assets\Scripts\HelloWorld.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
+    <Compile Include="Assets\SimpleJson.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Plugin\LitJSON.dll" />
+    <None Include="Assets\Plugin\Newtonsoft.Json.dll" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
@@ -396,6 +401,14 @@
     </Reference>
     <Reference Include="Unity.VisualScripting.Antlr3.Runtime">
       <HintPath>Library\PackageCache\com.unity.visualscripting@1.9.2\Runtime\VisualScripting.Flow\Dependencies\NCalc\Unity.VisualScripting.Antlr3.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="LitJSON">
+      <HintPath>Assets\Plugin\LitJSON.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>Assets\Plugin\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="netstandard">
