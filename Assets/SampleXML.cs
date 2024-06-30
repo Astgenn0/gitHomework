@@ -7,10 +7,15 @@ using UnityEngine;
 
 public class SampleXML : MonoBehaviour
 {
+    public SampleScriptableObject Sample;
     // Start is called before the first frame update
     void Start()
     {
-        LoadXML();
+        //LoadXML();
+
+        /*Sample = ScriptableObject.CreateInstance<SampleScriptableObject>();
+        Sample.index++;
+        Debug.Log(Sample.index);*/
     }
 
     void SaveXML()

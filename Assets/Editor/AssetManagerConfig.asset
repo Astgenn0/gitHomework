@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9a2d7c687a78994891d6f00768543b0, type: 3}
+  m_Name: AssetManagerConfig
+  m_EditorClassIdentifier: 
+  AssetManagerVersion: 100
+  CurrentBuildVersion: 100
+  BuildingPattern: 1
+  _IncrementalBuildMode: 0
+  CompressionPattern: 0
+  CurrentAllAssets:
+  - Assets/Resrouces\111.jpg
+  - Assets/Resrouces\Cube.prefab
+  - Assets/Resrouces\Elysia.jpg
+  - Assets/Resrouces\ENVIRONMENT_OBJECTS.prefab
+  - Assets/Resrouces\Sphere.prefab
+  - Assets/Resrouces\STATIC_MODELS.prefab
+  CurrentSelectedAssets: 000100000100
+  InvalidExtensionNames:
+  - .meta
+  - .cs

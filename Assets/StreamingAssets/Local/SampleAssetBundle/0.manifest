@@ -1,0 +1,20 @@
+ManifestFileVersion: 0
+CRC: 3463605322
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 236fe0db575e4c91277f0e4bb458f176
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: ff414f606ea1972259b080d7bcf51689
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 236fe0db575e4c91277f0e4bb458f176
+HashAppended: 0
+ClassTypes:
+- Class: 28
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Resrouces/Elysia.jpg
+Dependencies: []

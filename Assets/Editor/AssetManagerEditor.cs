@@ -23,6 +23,36 @@ public enum IncrementalBuildMode
     IncrementalBuild,
     ForceRebuild
 }
+public class AssetBundleEdge
+{
+    //可能是用来表达依赖关系的Node
+    //一个Node可能引用多个Node
+    //多个Node也可能引用一个Node
+
+    public List<AssetBundleNode> Nodes = new List<AssetBundleNode>();
+}
+
+public class AssetBundleNode
+{
+    //每个Node中应只有一个Asset
+    //此处string类型改为GUID也是一样的
+    public string assetName;
+
+    //可以判断一个资源是否为SourceAsset
+    //如果为-1说明是
+    public int SourceIndex = -1;
+
+    //当前Node的index列表
+    //会沿自身的outedge进行传递
+    public List<int> SourceIndices = new List<int>();
+
+    //当前Node所引用的Nodes
+    public AssetBundleEdge OutEdge;
+
+    //引用当前Node的Nodes
+    public AssetBundleEdge InEdge;
+
+}
 
 public class AssetBundleVersionDiffererce
 {
@@ -33,47 +63,11 @@ public class AssetBundleVersionDiffererce
 }
 public class AssetManagerEditor
 {
-    public static string AssetManagerVersion = "1.0.0";
-
-
-    //编辑器模拟下进行打包
-    //本地模式，打包到streamingAssets
-    //远端模式打包到任意远端路径，在该示例中为persistentDataPath
-    public static AssetBundlePattern BuildingPattern;
-
-    public static IncrementalBuildMode _IncrementalBuildMode;
-
-    public static AssetBundleCompresionPattern CompressionPattern;
-    
-    private static DefaultAsset _AssetBundleDirectory;
-    //需要打包的文件夹
-    public static DefaultAsset AssetBundleDirectory
-    {
-        get
-        {
-            return _AssetBundleDirectory;
-        }
-        set
-        {
-            //value关键字所指向的是调用该变量赋值时的值
-
-            if (_AssetBundleDirectory != value)
-            {
-                _AssetBundleDirectory = value;
-
-                GetCurrentDeirectoryAllAssets(); 
-            }
-        }
-    }   
+    public static AssetManagerConfigScirptableObjerct AssetManagerConfig;
 
     public static string AssetBundleOutputPath;
 
-    
-    public static List<string> CurrentAllAssets = new List<string>();
-    public static bool[] CurrentSelectedAssets;
 
-    //资源打包的版本
-    public static int CurrentBuildVersion=100;
     //通过MenuItem，声明Editor顶部菜单
     [MenuItem(nameof(AssetManagerEditor) + "/" + nameof(BuildAssetBundle))]
     static void BuildAssetBundle()
@@ -95,6 +89,171 @@ public class AssetManagerEditor
         BuildPipeline.BuildAssetBundles(AssetBundleOutputPath, CheckCompressionPattern(), BuildTarget.StandaloneWindows);
 
         Debug.Log("AB包打包已完成");
+    }
+
+
+    public static void BuildAssetBundleFromDiredGraph ()
+    {
+        CheckBuildingOutputPath();
+
+        List<string> selectedAssets = GetAllSelectedAssets();
+
+        List<AssetBundleNode> allNodes = new List<AssetBundleNode>();
+
+        //当前所选中的资源，就是SourceAsset
+        //所以首先添加SourceAsset的Node
+        for(int i = 0; i < selectedAssets.Count; i++)
+        {
+            AssetBundleNode currentNode = new AssetBundleNode();
+            currentNode.assetName = selectedAssets[i];
+            currentNode.SourceIndex = i;
+            currentNode.SourceIndices = new List<int>() { i };
+            currentNode.InEdge = new AssetBundleEdge();
+            allNodes.Add(currentNode);
+
+            GetNodesFromDependencies(currentNode, allNodes);
+        }
+
+        Dictionary<List<int>, List<AssetBundleNode>> assetBundleNodeDic = new Dictionary<List<int>, List<AssetBundleNode>>();
+
+        foreach(AssetBundleNode node in allNodes)
+        {
+            bool isEquals = false;
+            List<int> keylist = new List<int>();
+            //遍历所有的key
+            //通过这样的方式确保不同list之间的内容是否一致
+            foreach(List<int> key in assetBundleNodeDic.Keys)
+            {
+                //判断当前key的长度是否和当前node的SourceIndices长度相等
+                isEquals = node.SourceIndices.Count == key.Count && node.SourceIndices.All(p => key.Any(k => k.Equals(p)));
+
+                if (isEquals)
+                {
+                    keylist = key;
+                    break;
+                }
+
+            }
+            if (!isEquals)
+            {
+                keylist = node.SourceIndices;
+                assetBundleNodeDic.Add(node.SourceIndices, new List<AssetBundleNode>());
+            }
+
+            assetBundleNodeDic[keylist].Add(node);
+        }
+
+        AssetBundleBuild[] assetBundleBuilds = new AssetBundleBuild[assetBundleNodeDic.Count];
+        int buildindex = 0;
+
+        foreach(List<int> key in assetBundleNodeDic.Keys)
+        {
+            assetBundleBuilds[buildindex].assetBundleName = buildindex.ToString();
+
+            List<string> assetNames = new List<string>();
+            //这一层循环都是从同一个键值对中获取Node
+            //也就是从sourseIndices相同的集合中，获取对应的Node代表的Asset
+            foreach(AssetBundleNode node in assetBundleNodeDic[key])
+            {
+                assetNames.Add(node.assetName);
+            }
+
+            assetBundleBuilds[buildindex].assetNames = assetNames.ToArray();
+
+            buildindex++;
+        }
+
+        BuildPipeline.BuildAssetBundles(AssetBundleOutputPath, assetBundleBuilds, CheckCompressionPattern(), BuildTarget.StandaloneWindows);
+
+        BuildAssetBundleHashTable(assetBundleBuilds);
+        CopyAssetBundleToVersionFolder();
+
+        AssetManagerConfig.CurrentBuildVersion++;
+
+        AssetDatabase.Refresh();
+    }
+
+    public static void GetNodesFromDependencies(AssetBundleNode lastNode,List<AssetBundleNode> currentAllNodes)
+    {
+        string[] assetNames = AssetDatabase.GetDependencies(lastNode.assetName, false);
+        if (assetNames.Length > 0)
+        {
+            lastNode.OutEdge = new AssetBundleEdge();
+        }
+    }
+    public static void LoadConfig(AssetManagerEditorWindow window)
+    {
+        if (AssetManagerConfig == null)
+        {
+            //使用AssetDataBase加载资源，只需要传入Asset目录下的路径即可
+            AssetManagerConfig = AssetDatabase.LoadAssetAtPath<AssetManagerConfigScirptableObjerct>("Assets/Editor/AssetManagerConfig.asset");
+            window.VersionString = AssetManagerConfig.AssetManagerVersion.ToString();
+
+            for(int i = window.VersionString.Length; i >= 1; i--)
+            {
+                window.VersionString = window.VersionString.Insert(i,".");
+            }
+
+            window.editorWindowDirectory = AssetManagerConfig.AssetBundleDirectory;
+        }
+    }
+    public static void LoadWindowConfig(AssetManagerEditorWindow window)
+    {
+        if (window.WindowConfig == null)
+        {
+            //使用AssetDataBase加载资源，只需要传入Asset目录下的路径即可
+            window.WindowConfig = AssetDatabase.LoadAssetAtPath<AssetManagetEditorWindowConfigSO>("Assets/Editor/AssetManagerEditorWindowConfig.asset");
+            window.VersionString = AssetManagerConfig.AssetManagerVersion.ToString();
+
+            window.WindowConfig.TitleTextStyle = new GUIStyle();
+            window.WindowConfig.TitleTextStyle.fontSize = 26;
+            window.WindowConfig.TitleTextStyle.normal.textColor = Color.red;
+            window.WindowConfig.TitleTextStyle.alignment = TextAnchor.MiddleCenter;
+
+            window.WindowConfig.VersionTextstyle = new GUIStyle();
+            window.WindowConfig.VersionTextstyle.fontSize = 20;
+            window.WindowConfig.VersionTextstyle.normal.textColor = Color.gray;
+            window.WindowConfig.VersionTextstyle.alignment = TextAnchor.MiddleRight;
+        }
+    }
+
+    public static void LoadConfigFromJson()
+    {
+        string configPath= Path.Combine(Application.dataPath, "Editor/AssetManagerConfig.amc");
+
+        string configString = File.ReadAllText(configPath);
+
+        JsonUtility.FromJsonOverwrite(configString,AssetManagerConfig);
+
+
+    }
+    public static void SaveConfigToJson()
+    {
+        if (AssetManagerConfig!=null)
+        {
+            string configString = JsonUtility.ToJson(AssetManagerConfig);
+            string outputPath = Path.Combine(Application.dataPath, "Editor/AssetManagerConfig.amc");
+            Debug.Log(outputPath);
+
+            File.WriteAllText(outputPath, configString);
+
+            AssetDatabase.Refresh();
+        }
+    }
+
+    
+    [MenuItem(nameof(AssetManagerEditor) + "/" + nameof(CreateConfig))]
+    static void CreateConfig()
+    {
+        //声明scriptable类型的实例
+        //ScriptableObject类型的声明，就类似于Json中将某个类实例化的过程
+        AssetManagerConfigScirptableObjerct config = ScriptableObject.CreateInstance<AssetManagerConfigScirptableObjerct>();
+
+        AssetDatabase.CreateAsset(config, "Assets/Editor/AssetManagerConfig.asset");
+
+        AssetDatabase.SaveAssets();
+
+        AssetDatabase.Refresh();
     }
 
 
@@ -157,18 +316,17 @@ public class AssetManagerEditor
 
     public static List<string> GetAllSelectedAssets()
     {
-
         List<string> selectedAssets = new List<string>();
-        if (CurrentAllAssets == null||CurrentSelectedAssets.Length==0)
+        if (AssetManagerConfig.CurrentAllAssets == null|| AssetManagerConfig.CurrentSelectedAssets.Length==0)
         {
             return null;
         }
         //将值为true的对应索引文件，添加到要打包的资源列表中
-        for (int i = 0; i < CurrentSelectedAssets.Length; i++)
+        for (int i = 0; i < AssetManagerConfig.CurrentSelectedAssets.Length; i++)
         {
-            if (CurrentSelectedAssets[i])
+            if (AssetManagerConfig.CurrentSelectedAssets[i])
             {
-                selectedAssets.Add(CurrentAllAssets[i]);
+                selectedAssets.Add(AssetManagerConfig.CurrentAllAssets[i]);
             }
         }
         return selectedAssets;
@@ -194,24 +352,10 @@ public class AssetManagerEditor
         return dependiencies;
     }
 
-    public static void GetCurrentDeirectoryAllAssets()
-    {
-        if (_AssetBundleDirectory == null)
-        {
-            return;
-        }
-
-        string directoryPath = AssetDatabase.GetAssetPath(_AssetBundleDirectory);
-
-        CurrentAllAssets = FindAllAssetFromDirectory(directoryPath);
-
-        CurrentSelectedAssets = new bool[CurrentAllAssets.Count];
-    }
-
     static BuildAssetBundleOptions CheckCompressionPattern()
     {
         BuildAssetBundleOptions option = new BuildAssetBundleOptions();
-        switch (CompressionPattern)
+        switch (AssetManagerConfig.CompressionPattern)
         {
             case AssetBundleCompresionPattern.LZMA:
                 option = BuildAssetBundleOptions.None;
@@ -241,7 +385,7 @@ public class AssetManagerEditor
 
         
 
-        switch (BuildingPattern)
+        switch (AssetManagerConfig.BuildingPattern)
         {
             case AssetBundlePattern.EditorSimulation:
                 break;
@@ -323,7 +467,7 @@ public class AssetManagerEditor
     {
 
         CheckBuildingOutputPath();
-        if (AssetBundleDirectory == null)
+        if (AssetManagerConfig.AssetBundleDirectory == null)
         {
             Debug.LogError("打包目录不存在");
             return;
@@ -404,14 +548,14 @@ public class AssetManagerEditor
         CopyAssetBundleToVersionFolder();
         //GetVersionDifference(currentVersionAssetHashs);
         
-        CurrentBuildVersion++;
+        AssetManagerConfig.CurrentBuildVersion++;
 
         AssetDatabase.Refresh();
     }
 
     static void CopyAssetBundleToVersionFolder()
     {
-        string versionString = CurrentBuildVersion.ToString();
+        string versionString = AssetManagerConfig.CurrentBuildVersion.ToString();
         for (int i = versionString.Length - 1; i >= 1; i--)
         {
             versionString = versionString.Insert(i, ".");
@@ -451,7 +595,7 @@ public class AssetManagerEditor
     {
         BuildAssetBundleOptions options = BuildAssetBundleOptions.None;
 
-        switch (_IncrementalBuildMode)
+        switch (AssetManagerConfig._IncrementalBuildMode)
         {
             case IncrementalBuildMode.None:
                 options = BuildAssetBundleOptions.None;
@@ -480,9 +624,9 @@ public class AssetManagerEditor
 
     static void GetVersionDifference(string[] currentAssetHashs)
     {
-        if (CurrentBuildVersion >= 101)
+        if (AssetManagerConfig.CurrentBuildVersion >= 101)
         {
-            int lastVersion = CurrentBuildVersion - 1;
+            int lastVersion = AssetManagerConfig.CurrentBuildVersion - 1;
             string versionString = lastVersion.ToString();
             for (int i = versionString.Length - 1; i >= 1; i--)
             {
@@ -506,10 +650,12 @@ public class AssetManagerEditor
         }
     }
 
+
+
     public static void BuildAssetBundleFromEditorWindow()
     {
         CheckBuildingOutputPath();
-        if (AssetBundleDirectory == null)
+        if (AssetManagerConfig.AssetBundleDirectory == null)
         {
             Debug.LogError("打包目录不存在");
             return;
@@ -521,7 +667,7 @@ public class AssetManagerEditor
         //选中了多少个资源则打包多少个ab包
         AssetBundleBuild[] assetBundleBuilds=new AssetBundleBuild[selectedAssets.Count];
 
-        string directoryPath = AssetDatabase.GetAssetPath(_AssetBundleDirectory);
+        string directoryPath = AssetDatabase.GetAssetPath(AssetManagerConfig.AssetBundleDirectory);
 
         for (int i = 0; i < assetBundleBuilds.Length; i++)
         {
@@ -549,7 +695,7 @@ public class AssetManagerEditor
     public static void BuildAssetBundleFromDirectory()
     {
         CheckBuildingOutputPath();
-        if (AssetBundleDirectory == null)
+        if (AssetManagerConfig.AssetBundleDirectory == null)
         {
             Debug.Log("打包目录不存在");
             return;
@@ -562,7 +708,7 @@ public class AssetManagerEditor
         assetBundleBuild[0].assetBundleName = HelloWorld.ObjectAssetBundleName;
 
         //需要资源在工程下的路径
-        assetBundleBuild[0].assetNames = CurrentAllAssets.ToArray();
+        assetBundleBuild[0].assetNames = AssetManagerConfig.CurrentAllAssets.ToArray();
 
         if (string.IsNullOrEmpty(AssetBundleOutputPath))
         {
@@ -577,13 +723,27 @@ public class AssetManagerEditor
         BuildPipeline.BuildAssetBundles(AssetBundleOutputPath, assetBundleBuild, CheckCompressionPattern(), BuildTarget.StandaloneWindows);
     }
 
-    
 
-    public static List<string> FindAllAssetFromDirectory(string directoryPath)
+    //传入包含拓展名的包名，用于和无效拓展名组进行对比
+    public bool isValidExtentionName(string filename)
+    {
+        bool isValid = true;
+        foreach (string invalidName in AssetManagerConfig.InvalidExtensionNames)
+        {
+            if (filename.Contains(invalidName))
+            {
+                isValid = false;
+                return isValid;
+            }
+        }
+        return isValid;
+    }
+
+    public List<string> FindAllAssetNameFromDirectory(string directoryPath)
     {
         List<string> assetPaths = new List<string>();
 
-        if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+        if (!string.IsNullOrEmpty(directoryPath) || !Directory.Exists(directoryPath))
         {
             Debug.Log("文件夹路径不存在");
             return null;
@@ -600,16 +760,15 @@ public class AssetManagerEditor
         //所有非元数据文件路径都添加到列表中用于打包文件
         foreach (FileInfo info in fileInfos)
         {
-            if (info.Extension.Contains(".meta"))
+            if (!isValidExtentionName(info.Extension))
             {
-                continue;
+                //Assetbundle 打包只需要文件名
+                string assetPath = Path.Combine(directoryPath, info.Name);
+                assetPaths.Add(assetPath);
             }
-
-            //Assetbundle 打包只需要文件名
-            string assetPath = Path.Combine(directoryPath, info.Name);
-            assetPaths.Add(assetPath);
         }
 
         return assetPaths;
     }
+
 }
