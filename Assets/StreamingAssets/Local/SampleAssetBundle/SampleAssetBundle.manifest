@@ -1,0 +1,15 @@
+ManifestFileVersion: 0
+CRC: 2203735048
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: 499700c42a21001794f38a52cafc7fab
+      Dependencies:
+        Dependency_0: 67e688fcdb8e953325a3e8f012eacf95
+    Info_1:
+      Name: 121914983885196d66312fe4e9d161bf
+      Dependencies:
+        Dependency_0: 67e688fcdb8e953325a3e8f012eacf95
+    Info_2:
+      Name: 67e688fcdb8e953325a3e8f012eacf95
+      Dependencies: {}

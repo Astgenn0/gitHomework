@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 443513332
+CRC: 184841502
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: f05ef1318d8738dfba9c71ba1f20ecc9
+    Hash: 8affba8199e8eaa4fe46454bbdd3fd15
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 032515474f2947adc795ff33d905505c
+    Hash: 89c8b163c999d931ad03f8ce1557c431
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: f05ef1318d8738dfba9c71ba1f20ecc9
+    Hash: 8affba8199e8eaa4fe46454bbdd3fd15
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -28,12 +28,12 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
-- Class: 135
+- Class: 65
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Materials/4ad219f3c70cfa7e.mat
-- Assets/Resources/111.jpg
-- Assets/Resources/Sphere.prefab
+- Assets/Resources/Elysia.jpg
+- Assets/Resources/Cube.prefab
+- Assets/Materials/Elysia.mat
 Dependencies:
-- F:/unity/homework/gitHomework/Assets/StreamingAssets/SampleAssetBundle/2
+- F:/unity/homework/gitHomework/Assets/StreamingAssets/Local/SampleAssetBundle/67e688fcdb8e953325a3e8f012eacf95

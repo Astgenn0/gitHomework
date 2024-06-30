@@ -3,12 +3,33 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.IO;
+using System.Text;
+using System.Linq;
+using System.Security.Cryptography;
+using Unity.Plastic.Newtonsoft.Json;
 
 public enum AssetBundleCompresionPattern
 {
     LZMA,
     LZ4,
     None
+}
+
+//任何BuildOption处于非ForceRebuild选项下
+//都默认为增量打包
+public enum IncrementalBuildMode
+{
+    None,
+    IncrementalBuild,
+    ForceRebuild
+}
+
+public class AssetBundleVersionDiffererce
+{
+    //新增资源包
+    public List<string> AdditionAssetBundles=new List<string>();
+    //移除资源包
+    public List<string> ReducedAssetBundles=new List<string>();
 }
 public class AssetManagerEditor
 {
@@ -19,6 +40,8 @@ public class AssetManagerEditor
     //本地模式，打包到streamingAssets
     //远端模式打包到任意远端路径，在该示例中为persistentDataPath
     public static AssetBundlePattern BuildingPattern;
+
+    public static IncrementalBuildMode _IncrementalBuildMode;
 
     public static AssetBundleCompresionPattern CompressionPattern;
     
@@ -41,16 +64,16 @@ public class AssetManagerEditor
                 GetCurrentDeirectoryAllAssets(); 
             }
         }
-    }
-
-    
+    }   
 
     public static string AssetBundleOutputPath;
 
     
-
     public static List<string> CurrentAllAssets = new List<string>();
-    public static bool[] CurrentSelectAssets;
+    public static bool[] CurrentSelectedAssets;
+
+    //资源打包的版本
+    public static int CurrentBuildVersion=100;
     //通过MenuItem，声明Editor顶部菜单
     [MenuItem(nameof(AssetManagerEditor) + "/" + nameof(BuildAssetBundle))]
     static void BuildAssetBundle()
@@ -74,18 +97,76 @@ public class AssetManagerEditor
         Debug.Log("AB包打包已完成");
     }
 
+
+    //返回由一个包中所有的GUID列表经过MD5算法加密过的hash码
+    //如果GUI列表不发生变化，以及加密算法和参数没有变化
+    //总是能得到相同的字符串
+    static string ComputeAssetSetSignature(IEnumerable<string> assetNames)
+    {
+        var assetGUIDs = assetNames.Select(AssetDatabase.AssetPathToGUID);
+
+        MD5 currentMD5 = MD5.Create();
+        foreach(var assetDUID in assetGUIDs.OrderBy(x=>x))
+        {
+            byte[] bytes = Encoding.ASCII.GetBytes(assetDUID);
+
+            //使用MD5算法加密字节数组
+            currentMD5.TransformBlock(bytes,0,bytes.Length,null,0);
+        }
+
+        currentMD5.TransformFinalBlock(new byte[0], 0, 0);
+
+        return BytesToHexString(currentMD5.Hash);
+    }
+
+
+    //byte转为16进制字符串
+    static string BytesToHexString(byte[] bytes)
+    {
+        StringBuilder stringBuilder = new StringBuilder();
+
+        foreach(var aByte in bytes){
+            stringBuilder.Append(aByte.ToString("x2"));
+        }
+
+        return stringBuilder.ToString();
+    }
+
+    static string[] BuildAssetBundleHashTable(AssetBundleBuild[] assetBundleBuilds)
+    {
+        //表的长度与AssetBundle的数量保持一致
+        string[] assetBundleHashs = new string[assetBundleBuilds.Length];
+
+        for(int i = 0; i < assetBundleBuilds.Length; i++)
+        {
+            string assetBundlePath = Path.Combine(AssetBundleOutputPath, assetBundleBuilds[i].assetBundleName);
+
+            FileInfo info = new FileInfo(assetBundlePath);
+
+            //表中记录的是AssetBundle文件的长度以及其内容的MD5Hash值
+            assetBundleHashs[i] = $"{info.Length}_{assetBundleBuilds[i].assetBundleName}";
+        }
+
+        string hashString = JsonConvert.SerializeObject(assetBundleHashs);
+        string hashFilePath = Path.Combine(AssetBundleOutputPath, "AssetBundleHashs");
+
+        File.WriteAllText(hashFilePath, hashString);
+
+        return assetBundleHashs;
+    }
+
     public static List<string> GetAllSelectedAssets()
     {
 
         List<string> selectedAssets = new List<string>();
-        if (CurrentAllAssets == null||CurrentSelectAssets.Length==0)
+        if (CurrentAllAssets == null||CurrentSelectedAssets.Length==0)
         {
             return null;
         }
         //将值为true的对应索引文件，添加到要打包的资源列表中
-        for (int i = 0; i < CurrentSelectAssets.Length; i++)
+        for (int i = 0; i < CurrentSelectedAssets.Length; i++)
         {
-            if (CurrentSelectAssets[i])
+            if (CurrentSelectedAssets[i])
             {
                 selectedAssets.Add(CurrentAllAssets[i]);
             }
@@ -124,7 +205,7 @@ public class AssetManagerEditor
 
         CurrentAllAssets = FindAllAssetFromDirectory(directoryPath);
 
-        CurrentSelectAssets = new bool[CurrentAllAssets.Count];
+        CurrentSelectedAssets = new bool[CurrentAllAssets.Count];
     }
 
     static BuildAssetBundleOptions CheckCompressionPattern()
@@ -157,15 +238,18 @@ public class AssetManagerEditor
 
     static void CheckBuildingOutputPath()
     {
+
+        
+
         switch (BuildingPattern)
         {
             case AssetBundlePattern.EditorSimulation:
                 break;
             case AssetBundlePattern.Local:
-                AssetBundleOutputPath = Path.Combine(Application.streamingAssetsPath, HelloWorld.MainAssetBundleName);
+                AssetBundleOutputPath = Path.Combine(Application.streamingAssetsPath, "Local", HelloWorld.MainAssetBundleName);
                 break;
             case AssetBundlePattern.Remote:
-                AssetBundleOutputPath = Path.Combine(Application.persistentDataPath, HelloWorld.MainAssetBundleName);
+                AssetBundleOutputPath = Path.Combine(Application.persistentDataPath,"Remote", HelloWorld.MainAssetBundleName);
                 break;
         }
         if (string.IsNullOrEmpty(AssetBundleOutputPath))
@@ -212,8 +296,32 @@ public class AssetManagerEditor
         return newDependencies;
     }
 
+    static AssetBundleVersionDiffererce ContrastAssetBundleVersion(string[] oldVersionAssets,string[] newVersionAssets)
+    {
+        AssetBundleVersionDiffererce differerce = new AssetBundleVersionDiffererce();
+
+        foreach(var assetName in oldVersionAssets)
+        {
+            if (!newVersionAssets.Contains(assetName))
+            {
+                differerce.ReducedAssetBundles.Add(assetName);
+            }
+        }
+
+        foreach(var assetName in newVersionAssets)
+        {
+            if (!oldVersionAssets.Contains(assetName))
+            {
+                differerce.AdditionAssetBundles.Add(assetName);
+            }
+        }
+
+        return differerce;
+    }
+    
     public static void BuildAssetBundleFormSets()
     {
+
         CheckBuildingOutputPath();
         if (AssetBundleDirectory == null)
         {
@@ -269,10 +377,7 @@ public class AssetManagerEditor
         AssetBundleBuild[] assetBundleBuilds = new AssetBundleBuild[selectedAssetsDependencies.Count];
 
         for (int i = 0; i < assetBundleBuilds.Length; i++)
-        {
-
-
-            assetBundleBuilds[i].assetBundleName = i.ToString();
+        {            
 
             string[] assetNames = new string[selectedAssetsDependencies[i].Count];
 
@@ -286,12 +391,119 @@ public class AssetManagerEditor
                 }
                 assetNames[j] = assetName;
             }
+            string[] assetNamesArray = assetNames.ToArray();
 
-            assetBundleBuilds[i].assetNames =assetNames;
+            assetBundleBuilds[i].assetBundleName = ComputeAssetSetSignature(assetNamesArray);
+
+            assetBundleBuilds[i].assetNames =assetNamesArray;
         }
-        BuildPipeline.BuildAssetBundles(AssetBundleOutputPath, assetBundleBuilds, CheckCompressionPattern(), BuildTarget.StandaloneWindows);
+        BuildPipeline.BuildAssetBundles(AssetBundleOutputPath, assetBundleBuilds, CheckIncrementalBuildMode(), BuildTarget.StandaloneWindows);
+
+        string[] currentVersionAssetHashs= BuildAssetBundleHashTable(assetBundleBuilds);
+
+        CopyAssetBundleToVersionFolder();
+        //GetVersionDifference(currentVersionAssetHashs);
+        
+        CurrentBuildVersion++;
 
         AssetDatabase.Refresh();
+    }
+
+    static void CopyAssetBundleToVersionFolder()
+    {
+        string versionString = CurrentBuildVersion.ToString();
+        for (int i = versionString.Length - 1; i >= 1; i--)
+        {
+            versionString = versionString.Insert(i, ".");
+        }
+
+        string assetBundleVersionPath = Path.Combine(Application.streamingAssetsPath, versionString, HelloWorld.MainAssetBundleName);
+        if (!Directory.Exists(assetBundleVersionPath))
+        {
+            Directory.CreateDirectory(assetBundleVersionPath);
+        }
+
+        string[] assetNames = ReadAssetBundleHashTable(AssetBundleOutputPath);
+
+        //复制哈希表
+        string hashTableOriginPath = Path.Combine(AssetBundleOutputPath, "AssetBundleHashs");
+        string hashTableVersionPath = Path.Combine(assetBundleVersionPath, "AssetBundleHashs");
+        File.Copy(hashTableOriginPath, hashTableVersionPath);
+
+        //复制主包
+        string mainBundleOriginPath = Path.Combine(AssetBundleOutputPath, HelloWorld.MainAssetBundleName);
+        string mainBundleVersionPath = Path.Combine(assetBundleVersionPath, HelloWorld.MainAssetBundleName);
+        File.Copy(mainBundleOriginPath, mainBundleVersionPath);
+
+        foreach(var assetName in assetNames)
+        {
+            string assetHashName = assetName.Substring(assetName.IndexOf("_")+1);
+
+            string assetOriginPath = Path.Combine(AssetBundleOutputPath,assetHashName);
+            //fileinfo.Name是包含了拓展名的文件名
+            string assetVersionPath = Path.Combine(assetBundleVersionPath, assetHashName);
+            //fileInfo.FullName是包含了目录和文件名的文件完整路径
+            File.Copy(assetOriginPath, assetVersionPath,true);
+        }
+    }
+
+    static BuildAssetBundleOptions CheckIncrementalBuildMode()
+    {
+        BuildAssetBundleOptions options = BuildAssetBundleOptions.None;
+
+        switch (_IncrementalBuildMode)
+        {
+            case IncrementalBuildMode.None:
+                options = BuildAssetBundleOptions.None;
+                break;
+            case IncrementalBuildMode.IncrementalBuild:
+                options = BuildAssetBundleOptions.DeterministicAssetBundle;
+                break;
+            case IncrementalBuildMode.ForceRebuild:
+                options = BuildAssetBundleOptions.ForceRebuildAssetBundle;
+                break;
+        }
+        return options;
+    }
+
+    static string[] ReadAssetBundleHashTable(string outputPath)
+    {
+
+        string VersionHashTablePath = Path.Combine(outputPath, "AssetBundleHashs");
+
+        string VersionHashString = File.ReadAllText(VersionHashTablePath);
+
+        string[] VersionAssetHashs = JsonConvert.DeserializeObject<string[]>(VersionHashString);
+
+        return VersionAssetHashs;
+    }
+
+    static void GetVersionDifference(string[] currentAssetHashs)
+    {
+        if (CurrentBuildVersion >= 101)
+        {
+            int lastVersion = CurrentBuildVersion - 1;
+            string versionString = lastVersion.ToString();
+            for (int i = versionString.Length - 1; i >= 1; i--)
+            {
+                versionString = versionString.Insert(i, ".");
+            }
+
+            var lastOutputPath = Path.Combine(Application.streamingAssetsPath, versionString, HelloWorld.MainAssetBundleName);
+
+            string[] lastVersionAssetHashs = ReadAssetBundleHashTable(lastOutputPath);
+
+            AssetBundleVersionDiffererce differerce = ContrastAssetBundleVersion(lastVersionAssetHashs, currentAssetHashs);
+
+            foreach (var assetName in differerce.AdditionAssetBundles)
+            {
+                Debug.Log($"当前版本新增资源{assetName}");
+            }
+            foreach (var assetName in differerce.ReducedAssetBundles)
+            {
+                Debug.Log($"当前版本减少资源{assetName}");
+            }
+        }
     }
 
     public static void BuildAssetBundleFromEditorWindow()

@@ -45,6 +45,9 @@ public class AssetManagerEditorWindow : EditorWindow
         AssetManagerEditor.BuildingPattern = (AssetBundlePattern)EditorGUILayout.EnumPopup("打包模式",AssetManagerEditor.BuildingPattern);
 
         GUILayout.Space(20);
+        AssetManagerEditor._IncrementalBuildMode = (IncrementalBuildMode)EditorGUILayout.EnumPopup("增量打包", AssetManagerEditor._IncrementalBuildMode);
+
+        GUILayout.Space(20);
         AssetManagerEditor.CompressionPattern = (AssetBundleCompresionPattern)EditorGUILayout.EnumPopup("压缩格式", AssetManagerEditor.CompressionPattern);
 
         //打包资源选择
@@ -55,7 +58,7 @@ public class AssetManagerEditorWindow : EditorWindow
         {
             for(int i = 0; i < AssetManagerEditor.CurrentAllAssets.Count; i++)
             {
-                AssetManagerEditor.CurrentSelectAssets[i] = EditorGUILayout.ToggleLeft(AssetManagerEditor.CurrentAllAssets[i], AssetManagerEditor.CurrentSelectAssets[i]);
+                AssetManagerEditor.CurrentSelectedAssets[i] = EditorGUILayout.ToggleLeft(AssetManagerEditor.CurrentAllAssets[i], AssetManagerEditor.CurrentSelectedAssets[i]);
             }
         }
 
