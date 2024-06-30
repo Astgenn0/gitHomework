@@ -16,11 +16,7 @@ public class SimpleJson : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Student sampleStudient = new Student();
-        sampleStudient.Name = "zhangsan";
-        sampleStudient.Index = 1;
 
-        SaveJson(sampleStudient);
 
         LoadJson();
     }
