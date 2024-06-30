@@ -61,6 +61,7 @@
     <Compile Include="Assets\Scripts\HelloWorld.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\SimpleJson.cs" />
+    <Compile Include="Assets\SampleXML.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Plugin\LitJSON.dll" />
